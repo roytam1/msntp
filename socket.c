@@ -12,6 +12,9 @@ the only system that the author uses that has it is Linux. */
 #include "internet.h"
 #include <fcntl.h>
 
+#include <sys/types.h>
+#include <sys/time.h>
+
 #define SOCKET
 #include "kludges.h"
 #undef SOCKET
@@ -151,8 +154,12 @@ length and timeout are not fatal. */
     struct sockaddr_in scratch, *ptr;
     int n;
     int k;
+    struct timeval tv;
 
 /* Under normal circumstances, set up a timeout. */
+
+    tv.tv_sec = 5;
+    tv.tv_usec = 0;
 
     if (which < 0 || which >= MAX_SOCKETS || descriptors[which] < 0)
         fatal(0,"socket index out of range or not open",NULL);
@@ -179,6 +186,11 @@ length and timeout are not fatal. */
         memcpy(ptr = &scratch,&there[which],sizeof(struct sockaddr_in));
     n = sizeof(struct sockaddr_in);
     errno = 0;
+
+    if (setsockopt(descriptors[which], SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0) {
+        fprintf(stderr,"%s: Error setting socket timeout\n",argv0);
+    }
+
     k = recvfrom(descriptors[which],packet,(size_t)length,0,
         (struct sockaddr *)ptr,&n);
     if (waiting > 0) clear_alarm();
