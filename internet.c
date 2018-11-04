@@ -80,22 +80,19 @@ it needs to set up a timeout. */
         if (! isdigit(hostname[0])) {
             errno = 0;
             host = gethostbyname(hostname);
+            if (host == NULL) fatal(1,"unable to locate IP address/number",NULL);
+            if (host->h_length != sizeof(struct in_addr))
+                fatal(0,"the address does not seem to be an Internet one",NULL);
+            *address = *((struct in_addr **)host->h_addr_list)[0];
         } else {
-            if ((ipaddr = inet_addr(hostname)) == (unsigned long)-1)
+            if(!inet_aton(hostname, address))
                 fatal(0,"invalid IP number %s",hostname);
-            network_to_address(address,ipaddr);
             errno = 0;
-            host = gethostbyaddr((void *)address,sizeof(struct in_addr),
-                AF_INET);
         }
 
 /* Now clear the timer and check the result. */
 
         clear_alarm();
-        if (host == NULL) fatal(1,"unable to locate IP address/number",NULL);
-        if (host->h_length != sizeof(struct in_addr))
-            fatal(0,"the address does not seem to be an Internet one",NULL);
-        *address = *((struct in_addr **)host->h_addr_list)[0];
         if (memcmp(address,nowhere,sizeof(struct in_addr)) == 0 ||
                 memcmp(address,anywhere,sizeof(struct in_addr)) == 0 ||
                 memcmp(address,everywhere,sizeof(struct in_addr)) == 0)
@@ -103,7 +100,7 @@ it needs to set up a timeout. */
         if (verbose)
             fprintf(stderr,
                 "%s: using NTP server %s (%s)\n",
-                argv0,host->h_name,inet_ntoa(*address));
+                argv0,hostname,inet_ntoa(*address));
     }
 
 /* Find out the port number (usually from /etc/services), and leave it in 
